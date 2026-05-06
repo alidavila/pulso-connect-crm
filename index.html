@@ -6,700 +6,319 @@
     <title>PulsoConnect Command Center</title>
     <style>
         :root {
-            --bg-color: #0a0a0f;
-            --text-color: #e0e0e0;
-            --accent-green: #00ff88;
-            --accent-purple: #7c3aed;
-            --card-bg: #16161e;
-            --card-border: #2a2a35;
+            --bg: #08080d;
+            --card: #111118;
+            --border: #1e1e2a;
+            --text: #c8c8d0;
+            --muted: #6b6b78;
+            --accent: #00e676;
+            --purple: #7c3aed;
+            --warn: #eab308;
             --danger: #ef4444;
-            --warning: #eab308;
-            --nav-bg: rgba(10, 10, 15, 0.9);
+            --blue: #3b82f6;
         }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            width: 100%;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 12px 10px 80px;
+            font-size: 14px;
         }
-
-        /* HEADER */
         header {
-            padding: 16px;
-            background: linear-gradient(180deg, rgba(22,22,30,1) 0%, rgba(10,10,15,1) 100%);
-            border-bottom: 1px solid var(--card-border);
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            position: sticky;
-            top: 0;
-            z-index: 10;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 6px 4px 14px;
+            position: sticky; top: 0; background: var(--bg); z-index: 10;
         }
+        header h1 { font-size: 18px; font-weight: 700; color: #fff; }
+        header h1 span { color: var(--accent); }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-dot.online { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+        .status-dot.pending { background: var(--warn); }
+        .status-dot.offline { background: var(--danger); }
+        .timestamp { font-size: 11px; color: var(--muted); }
 
-        .header-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        h1 {
-            font-size: 1.25rem;
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--accent-green), var(--accent-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        h2 {
-            font-size: 0.875rem;
-            color: #888;
-            font-weight: 400;
-        }
-
-        .time-indicator {
-            font-variant-numeric: tabular-nums;
-            font-family: monospace;
-            font-size: 0.9rem;
-            color: var(--accent-green);
-        }
-
-        .system-status {
-            font-size: 0.75rem;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 4px;
-            padding: 4px 8px;
-            background: rgba(0, 255, 136, 0.1);
-            border-radius: 4px;
-            width: fit-content;
-            color: var(--accent-green);
-        }
-
-        /* MAIN CONTAINER */
-        main {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: 16px;
-            padding-bottom: 80px; /* Space for nav */
-            display: flex;
-            flex-direction: column;
-            max-width: 904px;
-            margin: 0 auto;
-            width: 100%;
-        }
-
-        .section {
-            display: none;
-            animation: fadeIn 0.3s ease;
-            height: 100%;
-            flex-direction: column;
-        }
-
-        .section.active {
-            display: flex;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(5px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .section-title {
-            font-size: 1.1rem;
-            margin-bottom: 16px;
-            color: white;
-            border-bottom: 1px solid var(--card-border);
-            padding-bottom: 8px;
-        }
-
-        /* SECCIÓN 1: MAPA DEL ROMPECABEZAS */
-        .puzzle-grid {
+        /* System Grid */
+        .systems-grid {
             display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 8px;
+            margin-bottom: 16px;
         }
-
-        @media (min-width: 600px) {
-            .puzzle-grid { grid-template-columns: 1fr 1fr; }
-        }
-
-        .system-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
+        .sys-card {
+            background: var(--card);
+            border: 1px solid var(--border);
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all .2s;
             position: relative;
             overflow: hidden;
         }
-
-        .system-card::before {
-            content: '';
-            position: absolute;
-            top: 0; left: 0; width: 4px; height: 100%;
-            background: var(--accent-purple);
+        .sys-card:active { transform: scale(0.97); }
+        .sys-card.expanded { border-color: var(--accent); }
+        .sys-card h3 { font-size: 13px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .sys-card .metric { font-size: 22px; font-weight: 700; color: var(--accent); margin: 6px 0; }
+        .sys-card .sub { font-size: 11px; color: var(--muted); }
+        .sys-card .details { display: none; margin-top: 10px; font-size: 11px; }
+        .sys-card.expanded .details { display: block; }
+        .sys-card .detail-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--muted); }
+        .sys-card .detail-row span:last-child { color: var(--text); font-weight: 500; }
+        .badge { 
+            display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600;
         }
+        .badge-new { background: rgba(124,58,237,0.2); color: var(--purple); }
+        .badge-applied { background: rgba(59,130,246,0.2); color: var(--blue); }
+        .badge-ready { background: rgba(0,230,118,0.15); color: var(--accent); }
 
-        .system-card:nth-child(even)::before { background: var(--accent-green); }
-
-        .system-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        /* Activity */
+        .section-title {
+            font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+            color: var(--muted); margin: 18px 0 8px; font-weight: 600;
         }
-
-        .system-name {
-            font-weight: 600;
-            font-size: 1rem;
-        }
-
-        .system-desc {
-            font-size: 0.8rem;
-            color: #888;
-            margin-top: 4px;
-        }
-
-        .status-dot {
-            width: 10px; height: 10px; border-radius: 50%;
-            background: var(--accent-green);
-        }
-        .status-dot.warning { background: var(--warning); }
-        .status-dot.danger { background: var(--danger); }
-
-        .system-details {
-            display: none;
-            margin-top: 16px;
-            padding-top: 16px;
-            border-top: 1px solid var(--card-border);
-            font-size: 0.85rem;
-        }
-
-        .system-card.expanded .system-details {
-            display: block;
-            animation: fadeIn 0.2s;
-        }
-
-        .metric-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .metric-value { font-family: monospace; color: var(--accent-green); }
-
-        /* SECCIÓN 2: KANBAN */
-        .kanban-board {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            height: 100%;
-        }
-
-        @media (min-width: 768px) {
-            .kanban-board { 
-                flex-direction: row; 
-                overflow-x: auto;
-                align-items: flex-start;
-            }
-            .kanban-col { min-width: 280px; width: 280px; }
-        }
-
-        .kanban-col {
-            background: rgba(22, 22, 30, 0.5);
-            border-radius: 8px;
-            padding: 12px;
-            border: 1px dashed var(--card-border);
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            min-height: 200px;
-        }
-
-        .kanban-col-header {
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #aaa;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .kanban-card {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 6px;
-            padding: 12px;
-            cursor: grab;
-            user-select: none;
-        }
-
-        .kanban-card:active { cursor: grabbing; opacity: 0.8; }
-
-        .k-id { font-size: 0.7rem; color: var(--accent-purple); font-family: monospace; }
-        .k-title { font-size: 0.9rem; margin: 6px 0; font-weight: 500; }
-        .k-meta { display: flex; justify-content: space-between; font-size: 0.75rem; color: #888; align-items: center;}
-        
-        .k-badge {
-            padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: bold;
-        }
-        .badge-alta { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
-        .badge-media { background: rgba(234, 179, 8, 0.2); color: var(--warning); }
-        .badge-baja { background: rgba(0, 255, 136, 0.2); color: var(--accent-green); }
-
-        .add-task-btn {
-            background: var(--card-border);
-            color: white;
-            border: none;
-            padding: 8px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            margin-top: auto;
-            transition: background 0.2s;
-        }
-        .add-task-btn:hover { background: #3a3a4a; }
-
-        /* SECCIÓN 3: ESTADO */
-        .status-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 12px;
-        }
-        
-        @media (min-width: 450px) {
-            .status-grid { grid-template-columns: 1fr 1fr; }
-        }
-
-        .status-widget {
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 10px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .sw-header { display: flex; justify-content: space-between; align-items: center; }
-        .sw-title { font-weight: 600; }
-        .sw-time { font-size: 0.75rem; color: #666; }
-        .sw-metric { font-size: 1.1rem; color: white; margin-top: 4px; }
-        .sw-status { font-size: 0.8rem; display: flex; align-items: center; gap: 4px; }
-
-        /* SECCIÓN 4: LOG DE ACTIVIDAD */
-        .log-container {
-            flex: 1;
-            background: var(--card-bg);
-            border: 1px solid var(--card-border);
-            border-radius: 8px;
-            overflow-y: auto;
-            padding: 8px;
-        }
-
         .log-entry {
-            display: flex;
-            gap: 12px;
-            padding: 12px;
-            border-bottom: 1px solid var(--card-border);
-            align-items: flex-start;
+            display: flex; gap: 10px; padding: 8px 10px;
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 8px; margin-bottom: 4px; font-size: 12px;
         }
+        .log-time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 50px; }
+        .log-icon { font-size: 14px; }
+        .log-text { flex: 1; }
 
-        .log-entry:last-child { border-bottom: none; }
-
-        .log-time {
-            font-family: monospace;
-            font-size: 0.75rem;
-            color: #888;
-            white-space: nowrap;
-            padding-top: 2px;
+        /* Kanban */
+        .kanban { display: grid; gap: 8px; }
+        .kanban-col { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
+        .kanban-col h4 { font-size: 12px; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+        .kanban-col h4 span { color: var(--text); }
+        .kanban-card { 
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            border-radius: 8px; padding: 10px; margin-bottom: 6px; font-size: 12px;
         }
+        .kanban-card .tag { font-size: 10px; color: var(--purple); margin-bottom: 3px; }
+        .kanban-card .title { color: #fff; font-weight: 500; }
 
-        .log-icon { font-size: 1.1rem; }
-        .log-text { font-size: 0.85rem; line-height: 1.4; color: #ccc; }
-
-        /* NAVEGACIÓN INFERIOR */
+        /* Nav */
         nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: var(--nav-bg);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid var(--card-border);
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 16px;
-            padding-bottom: calc(12px + env(safe-area-inset-bottom));
-            z-index: 100;
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: rgba(8,8,13,0.95); backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border); display: flex;
+            padding: 8px 0 env(safe-area-inset-bottom, 8px);
         }
+        nav a {
+            flex: 1; text-align: center; color: var(--muted); text-decoration: none;
+            font-size: 10px; padding: 6px 0;
+        }
+        nav a.active { color: var(--accent); }
+        nav a .nav-icon { font-size: 18px; display: block; margin-bottom: 2px; }
 
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            color: #888;
-            text-decoration: none;
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 0.7rem;
-            transition: color 0.2s;
-            width: 60px;
-        }
+        /* Loading */
+        .skeleton { background: linear-gradient(90deg, var(--card) 25%, rgba(255,255,255,0.03) 50%, var(--card) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-        .nav-item svg {
-            width: 24px; height: 24px;
-            fill: currentColor;
+        .error-toast { 
+            position: fixed; bottom: 80px; left: 12px; right: 12px;
+            background: var(--danger); color: #fff; padding: 10px 14px;
+            border-radius: 10px; font-size: 12px; display: none; z-index: 100;
         }
-
-        .nav-item.active {
-            color: var(--accent-green);
-        }
-        
-        .nav-item.active svg {
-            filter: drop-shadow(0 0 4px rgba(0,255,136,0.4));
-        }
-
     </style>
 </head>
 <body>
+    <div class="error-toast" id="toast"></div>
 
     <header>
-        <div class="header-top">
-            <div>
-                <h1>PulsoConnect</h1>
-                <h2>Agentic Operating System</h2>
-            </div>
-            <div class="time-indicator" id="clock">00:00:00</div>
+        <div>
+            <h1>⚡ Pulso<span>Connect</span></h1>
+            <div class="timestamp" id="clock">Conectando...</div>
         </div>
-        <div class="system-status">
-            <span class="status-dot"></span> Todos los sistemas operativos
-        </div>
+        <div style="font-size:12px;color:var(--muted)"><span class="status-dot online"></span>Live</div>
     </header>
 
-    <main>
-        <!-- SECCIÓN 1: PUZZLE MAP -->
-        <div id="sec-puzzle" class="section active">
-            <h3 class="section-title">🧩 Mapa del Rompecabezas</h3>
-            <div class="puzzle-grid">
-                
-                <div class="system-card" onclick="this.classList.toggle('expanded')">
-                    <div class="system-header">
-                        <div>
-                            <div class="system-name">VERITAS PROTOCOL</div>
-                            <div class="system-desc">"The VISA for AIs"</div>
-                        </div>
-                        <div class="status-dot warning"></div>
-                    </div>
-                    <div class="system-details">
-                        <div class="metric-row"><span>Estado</span><span style="color:var(--warning)">Parcial</span></div>
-                        <div class="metric-row"><span>Identidad</span><span class="metric-value">Activa</span></div>
-                        <div class="metric-row"><span>Pagos Crypto</span><span class="metric-value">Syncing...</span></div>
-                        <div class="metric-row"><span>Tx 24h</span><span class="metric-value">48</span></div>
-                    </div>
-                </div>
+    <!-- System Health -->
+    <div class="section-title">📡 Sistemas</div>
+    <div class="systems-grid" id="systems"></div>
 
-                <div class="system-card" onclick="this.classList.toggle('expanded')">
-                    <div class="system-header">
-                        <div>
-                            <div class="system-name">CAP</div>
-                            <div class="system-desc">Career Autonomous Pipeline</div>
-                        </div>
-                        <div class="status-dot"></div>
-                    </div>
-                    <div class="system-details">
-                        <div class="metric-row"><span>Estado</span><span style="color:var(--accent-green)">Online</span></div>
-                        <div class="metric-row"><span>Scraping</span><span class="metric-value">Activo</span></div>
-                        <div class="metric-row"><span>Auto-Apply</span><span class="metric-value">Activo</span></div>
-                        <div class="metric-row"><span>Apps Activas</span><span class="metric-value">1</span></div>
-                    </div>
-                </div>
+    <!-- Kanban HDS -->
+    <div class="section-title">📋 Tareas HDS</div>
+    <div class="kanban" id="kanban">
+        <div class="kanban-col"><h4>⏳ Pendientes <span id="cnt-pending">0</span></h4><div id="col-pending"></div></div>
+        <div class="kanban-col"><h4>🔄 En Progreso <span id="cnt-progress">0</span></h4><div id="col-progress"></div></div>
+        <div class="kanban-col"><h4>✅ Completado <span id="cnt-done">0</span></h4><div id="col-done"></div></div>
+    </div>
 
-                <div class="system-card" onclick="this.classList.toggle('expanded')">
-                    <div class="system-header">
-                        <div>
-                            <div class="system-name">PBS</div>
-                            <div class="system-desc">Pulso Broadcast System</div>
-                        </div>
-                        <div class="status-dot"></div>
-                    </div>
-                    <div class="system-details">
-                        <div class="metric-row"><span>Estado</span><span style="color:var(--accent-green)">Online</span></div>
-                        <div class="metric-row"><span>Generador</span><span class="metric-value">Idle</span></div>
-                        <div class="metric-row"><span>Publisher</span><span class="metric-value">Activo</span></div>
-                        <div class="metric-row"><span>Posts Hoy</span><span class="metric-value">1</span></div>
-                    </div>
-                </div>
+    <!-- Activity -->
+    <div class="section-title">📜 Actividad Reciente</div>
+    <div id="activity"></div>
 
-                <div class="system-card" onclick="this.classList.toggle('expanded')">
-                    <div class="system-header">
-                        <div>
-                            <div class="system-name">AOS / Hermes</div>
-                            <div class="system-desc">Agentic Operating System</div>
-                        </div>
-                        <div class="status-dot"></div>
-                    </div>
-                    <div class="system-details">
-                        <div class="metric-row"><span>Estado</span><span style="color:var(--accent-green)">Online</span></div>
-                        <div class="metric-row"><span>Core Logic</span><span class="metric-value">OK</span></div>
-                        <div class="metric-row"><span>HDS Sync</span><span class="metric-value">Connected</span></div>
-                        <div class="metric-row"><span>Uptime</span><span class="metric-value">99.9%</span></div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- SECCIÓN 2: KANBAN -->
-        <div id="sec-kanban" class="section">
-            <h3 class="section-title">📋 Human Delegation System</h3>
-            <div class="kanban-board">
-                
-                <div class="kanban-col" id="col-pendientes">
-                    <div class="kanban-col-header">Pendientes <span id="cnt-pendientes">2</span></div>
-                    <div class="kanban-card" draggable="true" id="task1">
-                        <div class="k-id">#HDS-CAP-001</div>
-                        <div class="k-title">Aplicar a Myriad360 AI Lead</div>
-                        <div class="k-meta">
-                            <span>👤 Carlos M.</span>
-                            <span class="k-badge badge-alta">ALTA</span>
-                        </div>
-                        <div class="k-meta" style="margin-top: 4px;">📅 7 Mayo</div>
-                    </div>
-                    <div class="kanban-card" draggable="true" id="task2">
-                        <div class="k-id">#HDS-PBS-001</div>
-                        <div class="k-title">Editar shorts PulsoConnect</div>
-                        <div class="k-meta">
-                            <span>👤 Carlos M.</span>
-                            <span class="k-badge badge-media">MEDIA</span>
-                        </div>
-                        <div class="k-meta" style="margin-top: 4px;">📅 10 Mayo</div>
-                    </div>
-                    <button class="add-task-btn">+ Nueva Tarea</button>
-                </div>
-
-                <div class="kanban-col" id="col-progreso">
-                    <div class="kanban-col-header">En Progreso <span id="cnt-progreso">1</span></div>
-                    <div class="kanban-card" draggable="true" id="task3">
-                        <div class="k-id">#HDS-CAP-002</div>
-                        <div class="k-title">Investigar Greenhouse workaround</div>
-                        <div class="k-meta">
-                            <span>🤖 Hermes</span>
-                            <span class="k-badge badge-alta">ALTA</span>
-                        </div>
-                        <div class="k-meta" style="margin-top: 4px;">📅 6 Mayo</div>
-                    </div>
-                </div>
-
-                <div class="kanban-col" id="col-auditoria">
-                    <div class="kanban-col-header">Auditoría <span id="cnt-auditoria">1</span></div>
-                    <div class="kanban-card" draggable="true" id="task4">
-                        <div class="k-id">#HDS-CAP-000</div>
-                        <div class="k-title">Test Email Reply System</div>
-                        <div class="k-meta">
-                            <span>🤖 Hermes</span>
-                            <span class="k-badge badge-baja">BAJA</span>
-                        </div>
-                        <div class="k-meta" style="margin-top: 4px;">📅 5 Mayo</div>
-                    </div>
-                </div>
-
-                <div class="kanban-col" id="col-completado">
-                    <div class="kanban-col-header">Completado <span id="cnt-completado">1</span></div>
-                    <div class="kanban-card" draggable="true" id="task5">
-                        <div class="k-id">#HDS-PBS-000</div>
-                        <div class="k-title">Publicar post LinkedIn 6AM</div>
-                        <div class="k-meta">
-                            <span>🤖 Hermes</span>
-                            <span class="k-badge badge-alta">ALTA</span>
-                        </div>
-                        <div class="k-meta" style="margin-top: 4px;">📅 5 Mayo</div>
-                    </div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- SECCIÓN 3: ESTADO -->
-        <div id="sec-status" class="section">
-            <h3 class="section-title">📊 Panel de Estado</h3>
-            <div class="status-grid">
-                
-                <div class="status-widget">
-                    <div class="sw-header">
-                        <span class="sw-title">VERITAS PROTOCOL</span>
-                        <span class="sw-time">hace 2h</span>
-                    </div>
-                    <div class="sw-status" style="color:var(--warning)"><span class="status-dot warning"></span> Parcial</div>
-                    <div class="sw-metric">48 ledger records</div>
-                </div>
-
-                <div class="status-widget">
-                    <div class="sw-header">
-                        <span class="sw-title">CAP</span>
-                        <span class="sw-time">hace 5min</span>
-                    </div>
-                    <div class="sw-status" style="color:var(--accent-green)"><span class="status-dot"></span> Online</div>
-                    <div class="sw-metric">1 aplicación activa</div>
-                </div>
-
-                <div class="status-widget">
-                    <div class="sw-header">
-                        <span class="sw-title">PBS</span>
-                        <span class="sw-time">hace 30min</span>
-                    </div>
-                    <div class="sw-status" style="color:var(--accent-green)"><span class="status-dot"></span> Online</div>
-                    <div class="sw-metric">1 post publicado hoy</div>
-                </div>
-                
-                <div class="status-widget">
-                    <div class="sw-header">
-                        <span class="sw-title">Hermes OS</span>
-                        <span class="sw-time">hace 1min</span>
-                    </div>
-                    <div class="sw-status" style="color:var(--accent-green)"><span class="status-dot"></span> Online</div>
-                    <div class="sw-metric">0 errores críticos</div>
-                </div>
-
-            </div>
-        </div>
-
-        <!-- SECCIÓN 4: LOG -->
-        <div id="sec-log" class="section">
-            <h3 class="section-title">📜 Log de Actividad</h3>
-            <div class="log-container" id="activity-log">
-                <!-- Se llena con JS -->
-            </div>
-        </div>
-
-    </main>
-
-    <!-- NAV -->
     <nav>
-        <button class="nav-item active" onclick="switchTab('sec-puzzle', this)">
-            <svg viewBox="0 0 24 24"><path d="M20.5 11H19V7c0-1.1-.9-2-2-2h-4V3.5C13 2.12 11.88 1 10.5 1S8 2.12 8 3.5V5H4c-1.1 0-1.99.9-1.99 2v3.8H3.5c1.49 0 2.7 1.21 2.7 2.7s-1.21 2.7-2.7 2.7H2V20c0 1.1.9 2 2 2h3.8v-1.5c0-1.49 1.21-2.7 2.7-2.7 1.49 0 2.7 1.21 2.7 2.7V22H17c1.1 0 2-.9 2-2v-4h1.5c1.38 0 2.5-1.12 2.5-2.5S21.88 11 20.5 11z"/></svg>
-            Mapa
-        </button>
-        <button class="nav-item" onclick="switchTab('sec-kanban', this)">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7V7h2v10zm4 0h-2V7h2v10zm4 0h-2V7h2v10z"/></svg>
-            Kanban
-        </button>
-        <button class="nav-item" onclick="switchTab('sec-status', this)">
-            <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
-            Estado
-        </button>
-        <button class="nav-item" onclick="switchTab('sec-log', this)">
-            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-            Log
-        </button>
+        <a href="#" class="active"><span class="nav-icon">📊</span>Dashboard</a>
+        <a href="#"><span class="nav-icon">📋</span>Tareas</a>
+        <a href="#"><span class="nav-icon">📈</span>Métricas</a>
+        <a href="#"><span class="nav-icon">⚙️</span>Sistemas</a>
     </nav>
 
     <script>
-        // RELOJ
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { hour12: false });
-        }
-        setInterval(updateClock, 1000);
-        updateClock();
+        // ==================== CONFIG ====================
+        const SUPABASE_PROJECTS = {
+            agentlink: { url: 'https://afospshladroetawktst.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmb3Nwc2hsYWRyb2V0YXdrdHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE1NjQsImV4cCI6MjA4NTM2NzU2NH0.XZX4j_hVbIhr3HTZSRsxrSlh0TnFJJBatEXujSFq69o' },
+            veritas:   { url: 'https://rdoccjqvkmvobmqrvisy.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb2NjanZxa212b2JtcXJ2aXN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNTE4NzksImV4cCI6MjA4NTkyNzg3OX0.UAAgpubj_uN1chg8-UyAB3CgEM0aG1MRLtU1mle1v_w' },
+            carnicero: { url: 'https://yqnjlbvyeyuwugnltxmg.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxbmpsYnZ5ZXl1d3Vnbmx0eG1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NjAxMDIsImV4cCI6MjA4NDQzNjEwMn0.d-s9zlSgh47B6T9-BwzdX1qCKBEL_-RH1qGxSmu2mAk' }
+        };
 
-        // TABS
-        function switchTab(sectionId, btn) {
-            document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
-            document.getElementById(sectionId).classList.add('active');
-            btn.classList.add('active');
-        }
-
-        // DRAG & DROP KANBAN
-        const cards = document.querySelectorAll('.kanban-card');
-        const cols = document.querySelectorAll('.kanban-col');
-        
-        cards.forEach(card => {
-            card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', card.id);
-                setTimeout(() => card.style.opacity = '0.5', 0);
-            });
-            card.addEventListener('dragend', () => {
-                card.style.opacity = '1';
-                updateCounts();
-            });
-        });
-
-        cols.forEach(col => {
-            col.addEventListener('dragover', e => {
-                e.preventDefault();
-                col.style.background = 'rgba(124, 58, 237, 0.1)';
-            });
-            col.addEventListener('dragleave', () => {
-                col.style.background = 'rgba(22, 22, 30, 0.5)';
-            });
-            col.addEventListener('drop', e => {
-                e.preventDefault();
-                col.style.background = 'rgba(22, 22, 30, 0.5)';
-                const id = e.dataTransfer.getData('text/plain');
-                const card = document.getElementById(id);
-                // Insert before the "Add task" button if it exists in the column
-                const btn = col.querySelector('.add-task-btn');
-                if(btn) col.insertBefore(card, btn);
-                else col.appendChild(card);
-            });
-        });
-
-        function updateCounts() {
-            document.getElementById('cnt-pendientes').textContent = document.getElementById('col-pendientes').querySelectorAll('.kanban-card').length;
-            document.getElementById('cnt-progreso').textContent = document.getElementById('col-progreso').querySelectorAll('.kanban-card').length;
-            document.getElementById('cnt-auditoria').textContent = document.getElementById('col-auditoria').querySelectorAll('.kanban-card').length;
-            document.getElementById('cnt-completado').textContent = document.getElementById('col-completado').querySelectorAll('.kanban-card').length;
+        // ==================== SUPABASE QUERY ====================
+        async function supabaseRPC(project, table, select = '*', limit = 10) {
+            const { url, anon } = SUPABASE_PROJECTS[project];
+            try {
+                const query = `select=${encodeURIComponent(select)}&limit=${limit}&order=created_at.desc`;
+                const resp = await fetch(`${url}/rest/v1/${table}?${query}`, {
+                    headers: { 'apikey': anon, 'Authorization': `Bearer ${anon}` }
+                });
+                if (!resp.ok) throw new Error(`${resp.status}`);
+                return await resp.json();
+            } catch (e) {
+                console.warn(`${project}/${table}: ${e.message}`);
+                return [];
+            }
         }
 
-        // GENERAR LOGS MOCK
-        const logs = [
-            "06:15 AM | 📧 | Email enviado a Veera Gupte (Myriad360)",
-            "05:42 AM | 📝 | Post LinkedIn publicado: PulsoConnect desde un teléfono",
-            "05:10 AM | 🧩 | HDS Sync completado con 0 errores",
-            "04:30 AM | 💸 | VERITAS: Tx #889 validada",
-            "03:15 AM | 🤖 | Hermes reiniciado (Update v2.1)",
-            "02:00 AM | 📊 | CAP: Scraping de 40 nuevas ofertas de LinkedIn finalizado",
-            "01:45 AM | 📧 | Respuesta automática enviada a Recruiter (TechCorp)",
-            "01:00 AM | 📝 | PBS: Draft de newsletter generado",
-            "12:30 AM | 🧩 | AOS Healthcheck: Todo verde",
-            "11:45 PM | 💸 | VERITAS: Pago a AI Agent 0x4A... confirmado",
-            "11:00 PM | 🤖 | Nueva tarea asignada a Hermes: #HDS-CAP-002",
-            "10:15 PM | 📊 | Métricas diarias consolidadas"
-        ];
+        // ==================== AGGREGATE API ====================
+        async function fetchAggregate() {
+            try {
+                const resp = await fetch('/api/aggregate');
+                if (!resp.ok) throw new Error(`${resp.status}`);
+                return await resp.json();
+            } catch (e) {
+                console.warn('aggregate API:', e.message);
+                return null;
+            }
+        }
 
-        const logContainer = document.getElementById('activity-log');
-        logs.forEach(log => {
-            const parts = log.split(' | ');
-            const html = `
-                <div class="log-entry">
-                    <div class="log-time">${parts[0]}</div>
-                    <div class="log-icon">${parts[1]}</div>
-                    <div class="log-text">${parts[2]}</div>
+        // ==================== RENDER ====================
+        async function loadDashboard() {
+            // Clock
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            // Try aggregate API first (server-side, has service_role access)
+            const agg = await fetchAggregate();
+
+            // Fallback: query Supabase directly with anon keys
+            const [agentlinkJobs, agentlinkContacts, carniceroData, veritasData] = await Promise.all([
+                supabaseRPC('agentlink', 'jobs', 'status,company_name,job_title', 20),
+                supabaseRPC('agentlink', 'contacts', 'count', 1),
+                supabaseRPC('carnicero', 'products', 'count', 1),
+                supabaseRPC('veritas', 'agents', 'count', 1)
+            ]);
+
+            // Job stats
+            const jobCount = agentlinkJobs.length;
+            const applied = agentlinkJobs.filter(j => j.status === 'applied' || j.status === 'interviewing').length;
+            const newJobs = agentlinkJobs.filter(j => j.status === 'new' || j.status === 'saved').length;
+
+            // Contacts
+            const contactCount = agentlinkContacts[0]?.count || '?';
+
+            // Render system cards
+            const systems = [
+                { 
+                    id: 'agentlink', name: 'AgentLink', icon: '🎯',
+                    metric: jobCount, unit: 'jobs',
+                    online: true,
+                    details: [
+                        { label: 'Aplicados', value: applied },
+                        { label: 'Nuevos', value: newJobs },
+                        { label: 'Contactos', value: contactCount }
+                    ]
+                },
+                { 
+                    id: 'veritas', name: 'Veritas', icon: '⛓️',
+                    metric: veritasData[0]?.count || 0, unit: 'agentes',
+                    online: veritasData.length > 0,
+                    details: [
+                        { label: 'Dashboard', value: veritasData.length > 0 ? 'OK' : 'Pendiente' },
+                        { label: 'Treasury', value: 'Sepolia' }
+                    ]
+                },
+                { 
+                    id: 'carnicero', name: 'Carnicero', icon: '🥩',
+                    metric: carniceroData[0]?.count || 0, unit: 'productos',
+                    online: carniceroData.length > 0,
+                    details: [
+                        { label: 'Marketplace', value: carniceroData.length > 0 ? 'OK' : 'Pendiente' }
+                    ]
+                }
+            ];
+
+            const grid = document.getElementById('systems');
+            grid.innerHTML = systems.map(sys => `
+                <div class="sys-card" onclick="toggleCard(this)" id="card-${sys.id}">
+                    <h3>${sys.icon} ${sys.name} 
+                        <span class="status-dot ${sys.online ? 'online' : 'pending'}"></span>
+                    </h3>
+                    <div class="metric">${sys.metric} <span style="font-size:12px;font-weight:400;color:var(--muted)">${sys.unit}</span></div>
+                    <div class="details">
+                        ${sys.details.map(d => `<div class="detail-row"><span>${d.label}</span><span>${d.value}</span></div>`).join('')}
+                    </div>
                 </div>
-            `;
-            logContainer.innerHTML += html;
-        });
+            `).join('');
 
+            // Activity log (from aggregate or fallback)
+            const activity = agg?.activity || [
+                { time: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}), icon: '📊', text: `AgentLink: ${jobCount} jobs, ${applied} aplicados` },
+                { time: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}), icon: '🏗️', text: 'CRM desplegado en Vercel' },
+                { time: '--', icon: '🔧', text: 'Conexión Supabase activa' }
+            ];
+
+            document.getElementById('activity').innerHTML = activity.map(log => `
+                <div class="log-entry">
+                    <div class="log-time">${log.time}</div>
+                    <div class="log-icon">${log.icon}</div>
+                    <div class="log-text">${log.text}</div>
+                </div>
+            `).join('');
+
+            // Kanban (for now, static - will be dynamic via HDS integration)
+            const tasks = {
+                pending: [
+                    { tag: '#HDS-CAP-001', title: 'Aplicar Myriad360 (Greenhouse)', assignee: '@Jesus_Dav' }
+                ],
+                progress: [],
+                done: []
+            };
+
+            function renderCol(colId, tasks) {
+                const el = document.getElementById(`col-${colId}`);
+                document.getElementById(`cnt-${colId}`).textContent = tasks.length;
+                el.innerHTML = tasks.map(t => `
+                    <div class="kanban-card">
+                        <div class="tag">${t.tag}</div>
+                        <div class="title">${t.title}</div>
+                        <div style="color:var(--muted);font-size:10px;margin-top:4px">${t.assignee}</div>
+                    </div>
+                `).join('');
+            }
+
+            renderCol('pending', tasks.pending);
+            renderCol('progress', tasks.progress);
+            renderCol('done', tasks.done);
+        }
+
+        function toggleCard(card) {
+            card.classList.toggle('expanded');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        // ==================== INIT ====================
+        loadDashboard().catch(e => showToast('Error cargando dashboard: ' + e.message));
+        setInterval(loadDashboard, 60000); // Refresh every 60s
+        setInterval(() => {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }, 1000);
     </script>
 </body>
 </html>
