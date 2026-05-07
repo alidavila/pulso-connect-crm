@@ -151,10 +151,10 @@
     <div id="activity"></div>
 
     <nav>
-        <a href="#" class="active"><span class="nav-icon">📊</span>Dashboard</a>
-        <a href="#"><span class="nav-icon">📋</span>Tareas</a>
-        <a href="#"><span class="nav-icon">📈</span>Métricas</a>
-        <a href="#"><span class="nav-icon">⚙️</span>Sistemas</a>
+        <a href="#" class="active" onclick="showTab('dashboard');return false"><span class="nav-icon">📊</span>Dashboard</a>
+        <a href="https://github.com/alidavila/pulso-connect-crm/issues" target="_blank"><span class="nav-icon">📋</span>Tareas</a>
+        <a href="#" onclick="showTab('metrics');return false"><span class="nav-icon">📈</span>Métricas</a>
+        <a href="https://github.com/alidavila/pulso-connect-crm/projects" target="_blank"><span class="nav-icon">⚙️</span>GitHub</a>
     </nav>
 
     <script>
@@ -276,23 +276,24 @@
                 </div>
             `).join('');
 
-            // Kanban (for now, static - will be dynamic via HDS integration)
-            const tasks = {
-                pending: [
-                    { tag: '#HDS-CAP-001', title: 'Aplicar Myriad360 (Greenhouse)', assignee: '@Jesus_Dav' }
-                ],
-                progress: [],
-                done: []
-            };
+            // Kanban — fetch real GitHub issues from aggregate API
+            const tasks = agg?.tasks || [];
+            const pending = tasks.filter(t => t.status === 'pending');
+            const progress = tasks.filter(t => t.status === 'progress');
+            const done = tasks.filter(t => t.status === 'done');
 
-            function renderCol(colId, tasks) {
+            function renderCol(colId, taskList) {
                 const el = document.getElementById(`col-${colId}`);
-                document.getElementById(`cnt-${colId}`).textContent = tasks.length;
-                el.innerHTML = tasks.map(t => `
-                    <div class="kanban-card">
-                        <div class="tag">${t.tag}</div>
+                document.getElementById(`cnt-${colId}`).textContent = taskList.length;
+                if (taskList.length === 0) {
+                    el.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px;text-align:center">—</div>';
+                    return;
+                }
+                el.innerHTML = taskList.map(t => `
+                    <div class="kanban-card" onclick="window.open('${t.url}','_blank')" style="cursor:pointer">
+                        <div class="tag">#${t.number}</div>
                         <div class="title">${t.title}</div>
-                        <div style="color:var(--muted);font-size:10px;margin-top:4px">${t.assignee}</div>
+                        <div style="color:var(--muted);font-size:10px;margin-top:4px">@${t.assignee}</div>
                     </div>
                 `).join('');
             }
@@ -311,6 +312,31 @@
             t.textContent = msg;
             t.style.display = 'block';
             setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        function showTab(tab) {
+            if (tab === 'metrics') {
+                document.getElementById('activity').innerHTML = `
+                    <div class="log-entry">
+                        <div class="log-icon">📊</div>
+                        <div class="log-text">
+                            <strong>Gestión de tareas:</strong> 
+                            <a href="https://github.com/alidavila/pulso-connect-crm/issues" target="_blank" style="color:var(--accent)">GitHub Issues →</a>
+                        </div>
+                    </div>
+                    <div class="log-entry">
+                        <div class="log-icon">📋</div>
+                        <div class="log-text">
+                            <strong>Kanban board:</strong> 
+                            <a href="https://github.com/alidavila/pulso-connect-crm/projects" target="_blank" style="color:var(--accent)">GitHub Projects →</a>
+                        </div>
+                    </div>
+                    <div class="log-entry">
+                        <div class="log-icon">💡</div>
+                        <div class="log-text">Las tareas se crean como issues en GitHub. El dashboard las muestra automáticamente.</div>
+                    </div>
+                `;
+            }
         }
 
         // ==================== INIT ====================

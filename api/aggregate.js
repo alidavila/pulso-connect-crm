@@ -1,4 +1,4 @@
-// api/aggregate.js — Serverless function that aggregates data from all Supabase projects
+// api/aggregate.js — Serverless function that aggregates data from all Supabase projects + GitHub issues
 // Uses service_role keys (server-side only, never exposed to frontend)
 
 const PROJECTS = {
@@ -33,15 +33,44 @@ async function supabaseQuery(project, table, query = 'select=count') {
   }
 }
 
+async function fetchGitHubIssues() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return [];
+  
+  try {
+    const res = await fetch('https://api.github.com/repos/alidavila/pulso-connect-crm/issues?state=open&labels=hds&per_page=20', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Accept': 'application/vnd.github+json',
+        'User-Agent': 'PulsoConnect-CRM'
+      }
+    });
+    if (!res.ok) return [];
+    const issues = await res.json();
+    return issues.map(i => ({
+      number: i.number,
+      title: i.title,
+      status: i.labels.some(l => l.name === 'done') ? 'done' : 
+              i.labels.some(l => l.name === 'in-progress') ? 'progress' : 'pending',
+      assignee: i.assignee?.login || 'sin asignar',
+      url: i.html_url,
+      labels: i.labels.map(l => l.name)
+    }));
+  } catch (e) {
+    return [];
+  }
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=30');
   
   try {
-    const [agentlinkJobs, agentlinkContacts, agentlinkContent] = await Promise.all([
+    const [agentlinkJobs, agentlinkContacts, agentlinkContent, githubIssues] = await Promise.all([
       supabaseQuery('agentlink', 'jobs', 'select=status'),
       supabaseQuery('agentlink', 'contacts', 'select=count'),
-      supabaseQuery('agentlink', 'content_calendar', 'select=count')
+      supabaseQuery('agentlink', 'content_calendar', 'select=count'),
+      fetchGitHubIssues()
     ]);
     
     // Count jobs by status
@@ -65,11 +94,16 @@ export default async function handler(req, res) {
         veritas: { status: 'pending' }
       },
       hds: {
-        pending: 0,
-        in_progress: 0,
+        pending: githubIssues.filter(i => i.status === 'pending').length,
+        in_progress: githubIssues.filter(i => i.status === 'progress').length,
         completed: 0
       },
-      activity: []
+      tasks: githubIssues,
+      activity: [
+        { time: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}), icon: '📊', text: `AgentLink: ${agentlinkJobs?.length || 0} jobs` },
+        { time: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}), icon: '🐙', text: `GitHub: ${githubIssues.length} tareas activas` },
+        { time: '--', icon: '🔧', text: 'Dashboard + GitHub Issues integrado' }
+      ]
     });
   } catch (e) {
     res.status(500).json({ error: e.message });
