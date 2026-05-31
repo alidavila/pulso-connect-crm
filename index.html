@@ -169,6 +169,15 @@
         <div id="clientes-list"></div>
     </div>
 
+    <!-- ===== FINANZAS ===== -->
+    <div class="tab-content" id="tab-finanzas">
+        <div class="stats-row" id="fin-stats"></div>
+        <div class="sect">📈 Ingresos por Servicio</div>
+        <div id="fin-services"></div>
+        <div class="sect">📋 Planes</div>
+        <div id="fin-plans"></div>
+    </div>
+
     <!-- ===== PROYECTOS ===== -->
     <div class="tab-content" id="tab-proyectos">
         <div class="sect">🏗️ Proyectos & Tareas</div>
@@ -197,6 +206,7 @@
         <a href="#" data-tab="servicios" onclick="switchTab('servicios')"><span class="ni">🛠️</span>Servicios</a>
         <a href="#" data-tab="pipeline" onclick="switchTab('pipeline')"><span class="ni">📊</span>Pipeline</a>
         <a href="#" data-tab="clientes" onclick="switchTab('clientes')"><span class="ni">👥</span>Clientes</a>
+        <a href="#" data-tab="finanzas" onclick="switchTab('finanzas')"><span class="ni">💰</span>Finanzas</a>
         <a href="#" data-tab="proyectos" onclick="switchTab('proyectos')"><span class="ni">🏗️</span>Proyectos</a>
         <a href="#" data-tab="insights" onclick="switchTab('insights')"><span class="ni">🧠</span>Insights</a>
         <a href="#" data-tab="conexiones" onclick="switchTab('conexiones')"><span class="ni">🔗</span>Red</a>
@@ -270,6 +280,7 @@
             else if (tab === 'servicios') loadServicios();
             else if (tab === 'pipeline') loadPipeline();
             else if (tab === 'clientes') loadClientes();
+            else if (tab === 'finanzas') loadFinanzas();
             else if (tab === 'proyectos') loadProyectos();
             else if (tab === 'insights') loadInsights();
             else if (tab === 'conexiones') loadConexiones();
@@ -754,6 +765,84 @@
             document.getElementById('modal-overlay').classList.remove('active');
             loadClientes();
             toast('Cliente eliminado');
+        }
+
+        // ================ FINANZAS ================
+        async function loadFinanzas() {
+            let clientes = [], leads = [];
+            try {
+                const [cr, lr] = await Promise.all([fetch('/api/clientes'), fetch('/api/leads')]);
+                if (cr.ok) clientes = await cr.json();
+                if (lr.ok) leads = await lr.json();
+            } catch (e) {
+                [clientes, leads] = await Promise.all([
+                    sq('dante', 'clientes', { order: 'created_at.desc', limit: 100 }),
+                    sq('dante', 'leads', { order: 'created_at.desc', limit: 50 })
+                ]);
+            }
+
+            const svcs = await sq('dante', 'services', { order: 'label.asc', limit: 20 });
+            const svcMap = {}; svcs.forEach(s => svcMap[s.id] = s.label);
+
+            // MRR = sum of active client pricing
+            const activos = clientes.filter(c => c.status === 'activo');
+            const mrr = activos.reduce((s, c) => s + (parseFloat(c.pricing) || 0), 0);
+            const arr = mrr * 12;
+
+            // Pipeline value
+            const pipelineVal = leads.filter(l => l.status !== 'cerrado_perdido').reduce((s, l) => s + (parseFloat(l.value) || 0), 0);
+
+            // Churn (inactivos + cancelados / total)
+            const churned = clientes.filter(c => c.status === 'inactivo' || c.status === 'cancelado').length;
+            const churnRate = clientes.length > 0 ? ((churned / clientes.length) * 100).toFixed(1) : '0';
+
+            // Stats
+            document.getElementById('fin-stats').innerHTML = [
+                { n: '$' + mrr.toLocaleString(), l: 'MRR/mes' },
+                { n: '$' + arr.toLocaleString(), l: 'ARR/año' },
+                { n: '$' + pipelineVal.toLocaleString(), l: 'Pipeline' },
+                { n: churnRate + '%', l: 'Churn' }
+            ].map(s => `<div class="stat-card"><div class="num">${s.n}</div><div class="lbl">${s.l}</div></div>`).join('');
+
+            // Revenue by service
+            const svcRevenue = {};
+            activos.forEach(c => {
+                (c.servicios || []).forEach(sid => {
+                    const share = (c.pricing || 0) / ((c.servicios || []).length || 1);
+                    svcRevenue[sid] = (svcRevenue[sid] || 0) + share;
+                });
+            });
+            document.getElementById('fin-services').innerHTML = Object.entries(svcRevenue)
+                .sort((a, b) => b[1] - a[1])
+                .map(([sid, rev]) => {
+                    const pct = mrr > 0 ? ((rev / mrr) * 100).toFixed(0) : 0;
+                    const w = mrr > 0 ? ((rev / mrr) * 100).toFixed(0) : 0;
+                    return `
+                    <div class="lcard">
+                        <div class="top"><span class="title">${svcMap[sid] || sid?.slice(0,8)}</span><span style="color:var(--accent)">$${rev.toFixed(0)}/mes</span></div>
+                        <div style="height:4px;background:var(--border);border-radius:2px;margin-top:6px">
+                            <div style="height:100%;width:${w}%;background:var(--accent);border-radius:2px"></div>
+                        </div>
+                        <div style="font-size:10px;color:var(--muted);margin-top:2px">${pct}% del MRR</div>
+                    </div>`;
+                }).join('') || '<div class="empty">Sin datos de ingresos</div>';
+
+            // Plan distribution
+            const plans = {};
+            clientes.forEach(c => { plans[c.plan || 'free'] = (plans[c.plan || 'free'] || 0) + 1; });
+            const maxPlan = Math.max(1, ...Object.values(plans));
+            document.getElementById('fin-plans').innerHTML = Object.entries(plans)
+                .sort((a, b) => b[1] - a[1])
+                .map(([plan, count]) => {
+                    const w = ((count / maxPlan) * 100).toFixed(0);
+                    return `
+                    <div class="lcard">
+                        <div class="top"><span class="title">${plan}</span><span>${count} clientes</span></div>
+                        <div style="height:4px;background:var(--border);border-radius:2px;margin-top:4px">
+                            <div style="height:100%;width:${w}%;background:var(--purple);border-radius:2px"></div>
+                        </div>
+                    </div>`;
+                }).join('') || '<div class="empty">Sin datos</div>';
         }
 
         // ================ INIT ================
