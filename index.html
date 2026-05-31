@@ -126,7 +126,10 @@
 
     <header>
         <div><h1>⚡ Pulso<span>Connect</span></h1><div class="timestamp" id="clock">--</div></div>
-        <div style="font-size:12px;color:var(--muted)"><span class="sdot online"></span>Live</div>
+        <div style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:10px">
+            <span id="alert-badge" style="display:none;background:var(--red);color:#fff;border-radius:50%;width:20px;height:20px;text-align:center;line-height:20px;font-size:11px;font-weight:700;cursor:pointer" onclick="showAlerts()">!</span>
+            <span class="sdot online"></span>Live
+        </div>
     </header>
 
     <!-- ===== DASHBOARD ===== -->
@@ -919,13 +922,57 @@
             }
         }
 
+        // ================ ALERTAS ================
+        async function loadAlertas() {
+            try {
+                const r = await fetch('/api/alertas');
+                if (!r.ok) return;
+                const { alerts, total } = await r.json();
+                const badge = document.getElementById('alert-badge');
+                if (total > 0) {
+                    badge.style.display = 'block';
+                    badge.textContent = total;
+                    badge.title = alerts.map(a => a.msg).join('\n');
+                    if (alerts.some(a => a.severity === 'error')) badge.style.background = 'var(--red)';
+                    else badge.style.background = 'var(--warn)';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) {}
+        }
+
+        async function showAlerts() {
+            const overlay = document.getElementById('modal-overlay');
+            overlay.classList.add('active');
+            const modal = document.getElementById('modal');
+            modal.innerHTML = '<div class="loader"></div>';
+
+            try {
+                const r = await fetch('/api/alertas');
+                const { alerts } = await r.json();
+                modal.innerHTML = `
+                    <h3>🔔 Alertas (${alerts.length})</h3>
+                    ${alerts.length === 0 ? '<div class="empty">Todo en orden ✅</div>' : alerts.map(a => `
+                        <div class="lcard" style="border-left:3px solid ${a.severity==='error'?'var(--red)':'var(--warn)'};margin-bottom:6px">
+                            <div class="top"><span>${a.icon} ${a.msg}</span></div>
+                        </div>
+                    `).join('')}
+                    <div class="actions"><button class="btn btn-ghost" onclick="document.getElementById('modal-overlay').classList.remove('active')">Cerrar</button></div>
+                `;
+            } catch (e) {
+                modal.innerHTML = '<h3>Error</h3><p>No se pudieron cargar las alertas</p>';
+            }
+        }
+
         // ================ INIT ================
         loadDashboard().catch(e => toast('Error: ' + e.message));
+        loadAlertas();
         setInterval(() => {
             document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }, 1000);
         setInterval(() => {
             if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboard();
+            loadAlertas();
         }, 60000);
     </script>
 </body>
