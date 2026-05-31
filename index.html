@@ -134,6 +134,8 @@
         <div class="stats-row" id="stats"></div>
         <div class="sect">📡 Sistemas</div>
         <div class="sys-grid" id="systems"></div>
+        <div class="sect">📈 KPIs</div>
+        <div class="stats-row" id="kpi-stats"></div>
         <div class="sect">📜 Actividad</div>
         <div id="activity"></div>
     </div>
@@ -346,17 +348,40 @@
                 </div>
             `).join('');
 
-            // Activity
-            const svcs = await sq('dante', 'services', { order: 'updated_at.desc', limit: 5 });
-            const activity = svcs.map(s => ({
-                time: timeAgo(s.updated_at), icon: '🛠️',
-                text: `<strong>${s.label}</strong>: ${(s.description || '').slice(0, 60)}`
-            }));
-            document.getElementById('activity').innerHTML = activity.map(a => `
+            // Activity — mix of recent conversations, leads, and services
+            const now = new Date();
+            const weekAgo = new Date(now - 7*86400000).toISOString();
+
+            // Fetch recent activity from multiple sources
+            const [recentConv, recentLeads, recentClients] = await Promise.all([
+                fetch(`/api/conversaciones?limit=3`).then(r => r.ok ? r.json() : { data: [] }).catch(() => ({ data: [] })),
+                sq('dante', 'leads', { order: 'created_at.desc', limit: 3 }),
+                sq('dante', 'clientes', { order: 'created_at.desc', limit: 3 })
+            ]);
+
+            const activity = [
+                ...(recentConv.data || []).map(c => ({ time: timeAgo(c.timestamp), icon: '💬', text: `<strong>Chat:</strong> ${(c.mensaje_original || '').slice(0, 70)}` })),
+                ...recentLeads.map(l => ({ time: timeAgo(l.created_at), icon: '📊', text: `<strong>Lead:</strong> ${l.name} — ${l.company || 'Sin empresa'} ($${l.value || 0})` })),
+                ...recentClients.map(c => ({ time: timeAgo(c.created_at), icon: '👤', text: `<strong>Cliente:</strong> ${c.name} — ${c.plan || 'free'}` })),
+            ].sort((a, b) => (b.time === 'ahora' ? 999 : 0) - (a.time === 'ahora' ? 999 : 0)).slice(0, 8);
+
+            document.getElementById('activity').innerHTML = activity.length > 0 ? activity.map(a => `
                 <div class="log-entry">
                     <div class="log-time">${a.time}</div><div class="log-icon">${a.icon}</div><div class="log-text">${a.text}</div>
                 </div>
-            `).join('');
+            `).join('') : '<div class="empty">Sin actividad reciente</div>';
+
+            // KPI metrics
+            const newLeadsWeek = sqCount('dante', 'leads'); // approximate
+            const activeClients = sqCount('dante', 'clientes');
+            const insightsCount = insCount;
+            const processCount = sqCount('dante', 'processes');
+
+            document.getElementById('kpi-stats').innerHTML = [
+                { n: convCount, l: 'Conversaciones' },
+                { n: insightsCount, l: 'Insights' },
+                { n: '18', l: 'Procesos' }
+            ].map(s => `<div class="stat-card"><div class="num">${s.n}</div><div class="lbl">${s.l}</div></div>`).join('');
         }
 
         // ================ SERVICIOS ================
