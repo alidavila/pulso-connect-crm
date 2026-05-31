@@ -178,6 +178,19 @@
         <div id="fin-plans"></div>
     </div>
 
+    <!-- ===== CONVERSACIONES ===== -->
+    <div class="tab-content" id="tab-conversaciones">
+        <div class="sect">
+            💬 Conversaciones
+            <span id="conv-total" style="font-size:11px;color:var(--muted)"></span>
+        </div>
+        <div style="margin-bottom:10px">
+            <input id="conv-search" type="text" placeholder="Buscar en conversaciones..." style="width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:inherit" oninput="loadConversaciones()">
+        </div>
+        <div id="conv-list"></div>
+        <div id="conv-pager" style="display:flex;justify-content:center;gap:8px;margin-top:12px"></div>
+    </div>
+
     <!-- ===== PROYECTOS ===== -->
     <div class="tab-content" id="tab-proyectos">
         <div class="sect">🏗️ Proyectos & Tareas</div>
@@ -207,6 +220,7 @@
         <a href="#" data-tab="pipeline" onclick="switchTab('pipeline')"><span class="ni">📊</span>Pipeline</a>
         <a href="#" data-tab="clientes" onclick="switchTab('clientes')"><span class="ni">👥</span>Clientes</a>
         <a href="#" data-tab="finanzas" onclick="switchTab('finanzas')"><span class="ni">💰</span>Finanzas</a>
+        <a href="#" data-tab="conversaciones" onclick="switchTab('conversaciones')"><span class="ni">💬</span>Chats</a>
         <a href="#" data-tab="proyectos" onclick="switchTab('proyectos')"><span class="ni">🏗️</span>Proyectos</a>
         <a href="#" data-tab="insights" onclick="switchTab('insights')"><span class="ni">🧠</span>Insights</a>
         <a href="#" data-tab="conexiones" onclick="switchTab('conexiones')"><span class="ni">🔗</span>Red</a>
@@ -281,6 +295,7 @@
             else if (tab === 'pipeline') loadPipeline();
             else if (tab === 'clientes') loadClientes();
             else if (tab === 'finanzas') loadFinanzas();
+            else if (tab === 'conversaciones') loadConversaciones();
             else if (tab === 'proyectos') loadProyectos();
             else if (tab === 'insights') loadInsights();
             else if (tab === 'conexiones') loadConexiones();
@@ -843,6 +858,40 @@
                         </div>
                     </div>`;
                 }).join('') || '<div class="empty">Sin datos</div>';
+        }
+
+        // ================ CONVERSACIONES ================
+        let convPage = 0, convLimit = 30;
+        async function loadConversaciones() {
+            const q = document.getElementById('conv-search')?.value || '';
+            const offset = convPage * convLimit;
+            try {
+                const r = await fetch(`/api/conversaciones?q=${encodeURIComponent(q)}&limit=${convLimit}&offset=${offset}`);
+                if (!r.ok) throw new Error(r.status);
+                const { data, total } = await r.json();
+
+                document.getElementById('conv-total').textContent = `${total} conversaciones`;
+                document.getElementById('conv-list').innerHTML = data.map(c => `
+                    <div class="lcard" onclick="this.classList.toggle('expanded')">
+                        <div class="top">
+                            <span class="title" style="font-size:12px">${(c.mensaje_original || '').slice(0, 80)}</span>
+                            <span style="font-size:10px;color:var(--muted)">${timeAgo(c.timestamp)}</span>
+                        </div>
+                        <div class="desc-full" style="margin-top:8px;font-size:12px;color:var(--text);line-height:1.6;white-space:pre-wrap;max-height:200px;overflow-y:auto">${c.respuesta_ia || '(sin respuesta)'}</div>
+                        ${c.es_error ? '<div style="color:var(--red);font-size:10px;margin-top:4px">⚠️ Error</div>' : ''}
+                    </div>
+                `).join('') || '<div class="empty">No se encontraron conversaciones</div>';
+
+                // Pager
+                const totalPages = Math.ceil(total / convLimit);
+                document.getElementById('conv-pager').innerHTML = totalPages > 1 ? `
+                    <button class="btn btn-ghost btn-sm" onclick="convPage=Math.max(0,convPage-1);loadConversaciones()" ${convPage===0?'disabled':''}>←</button>
+                    <span style="font-size:12px;color:var(--muted);padding:4px 8px">${convPage+1} / ${totalPages}</span>
+                    <button class="btn btn-ghost btn-sm" onclick="convPage=Math.min(${totalPages-1},convPage+1);loadConversaciones()" ${convPage>=totalPages-1?'disabled':''}>→</button>
+                ` : '';
+            } catch (e) {
+                document.getElementById('conv-list').innerHTML = '<div class="empty">Error cargando conversaciones</div>';
+            }
         }
 
         // ================ INIT ================
