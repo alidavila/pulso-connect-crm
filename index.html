@@ -3,348 +3,468 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PulsoConnect Command Center</title>
+    <title>PulsoConnect CRM</title>
     <style>
         :root {
-            --bg: #08080d;
-            --card: #111118;
-            --border: #1e1e2a;
-            --text: #c8c8d0;
-            --muted: #6b6b78;
-            --accent: #00e676;
-            --purple: #7c3aed;
-            --warn: #eab308;
-            --danger: #ef4444;
-            --blue: #3b82f6;
+            --bg: #050508; --card: #0d0d14; --border: #1a1a28;
+            --text: #d4d4dc; --muted: #6b6b7a; --accent: #c9a84c;
+            --accent-soft: rgba(201,168,76,0.12); --green: #22c55e;
+            --purple: #7c3aed; --warn: #eab308; --red: #ef4444; --blue: #3b82f6;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            min-height: 100vh;
-            padding: 12px 10px 80px;
-            font-size: 14px;
+            background: var(--bg); color: var(--text);
+            min-height: 100vh; padding: 12px 12px 90px; font-size: 14px;
         }
+
         header {
             display: flex; justify-content: space-between; align-items: center;
-            padding: 6px 4px 14px;
-            position: sticky; top: 0; background: var(--bg); z-index: 10;
+            padding: 6px 4px 14px; position: sticky; top: 0;
+            background: var(--bg); z-index: 10;
         }
         header h1 { font-size: 18px; font-weight: 700; color: #fff; }
         header h1 span { color: var(--accent); }
-        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-        .status-dot.online { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
-        .status-dot.pending { background: var(--warn); }
-        .status-dot.offline { background: var(--danger); }
         .timestamp { font-size: 11px; color: var(--muted); }
 
-        /* System Grid */
-        .systems-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-        .sys-card {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px;
-            cursor: pointer;
-            transition: all .2s;
-            position: relative;
-            overflow: hidden;
-        }
-        .sys-card:active { transform: scale(0.97); }
+        .sdot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .sdot.online { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .sdot.pending { background: var(--warn); }
+
+        /* Stats row */
+        .stats-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+        .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+        .stat-card .num { font-size: 26px; font-weight: 700; color: var(--accent); }
+        .stat-card .lbl { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+        /* System cards */
+        .sys-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 16px; }
+        .sys-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; cursor: pointer; transition: all .2s; }
+        .sys-card:active { transform: scale(.97); }
         .sys-card.expanded { border-color: var(--accent); }
         .sys-card h3 { font-size: 13px; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
         .sys-card .metric { font-size: 22px; font-weight: 700; color: var(--accent); margin: 6px 0; }
-        .sys-card .sub { font-size: 11px; color: var(--muted); }
         .sys-card .details { display: none; margin-top: 10px; font-size: 11px; }
         .sys-card.expanded .details { display: block; }
-        .sys-card .detail-row { display: flex; justify-content: space-between; padding: 3px 0; color: var(--muted); }
-        .sys-card .detail-row span:last-child { color: var(--text); font-weight: 500; }
-        .badge { 
-            display: inline-block; padding: 2px 7px; border-radius: 10px; font-size: 10px; font-weight: 600;
-        }
-        .badge-new { background: rgba(124,58,237,0.2); color: var(--purple); }
-        .badge-applied { background: rgba(59,130,246,0.2); color: var(--blue); }
-        .badge-ready { background: rgba(0,230,118,0.15); color: var(--accent); }
+        .sys-card .dr { display: flex; justify-content: space-between; padding: 3px 0; color: var(--muted); }
+        .sys-card .dr span:last-child { color: var(--text); font-weight: 500; }
+
+        /* Section */
+        .sect { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin: 18px 0 8px; font-weight: 600; display: flex; justify-content: space-between; align-items: center; }
+
+        /* Table */
+        .tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .tbl th { text-align: left; color: var(--muted); font-weight: 500; padding: 8px 6px; border-bottom: 1px solid var(--border); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .tbl td { padding: 10px 6px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .tbl tr { cursor: pointer; transition: background .15s; }
+        .tbl tr:hover { background: var(--accent-soft); }
+
+        /* Tags */
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+        .tag-active { background: rgba(34,197,94,0.15); color: var(--green); }
+        .tag-idea { background: rgba(124,58,237,0.15); color: var(--purple); }
+        .tag-diseno { background: rgba(59,130,246,0.15); color: var(--blue); }
+        .tag-wip { background: rgba(234,179,8,0.15); color: var(--warn); }
+        .tag-default { background: rgba(107,107,122,0.15); color: var(--muted); }
+
+        /* Cards */
+        .card-list { display: flex; flex-direction: column; gap: 6px; }
+        .lcard { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; cursor: pointer; transition: all .2s; }
+        .lcard:hover { border-color: var(--accent); }
+        .lcard .top { display: flex; justify-content: space-between; align-items: start; margin-bottom: 4px; }
+        .lcard .title { font-weight: 600; color: #fff; font-size: 13px; }
+        .lcard .desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+        .lcard .meta { font-size: 10px; color: var(--muted); margin-top: 6px; display: flex; gap: 12px; }
+        .lcard.expanded .desc-full { display: block; }
+        .lcard .desc-full { display: none; margin-top: 8px; font-size: 12px; color: var(--text); line-height: 1.6; }
 
         /* Activity */
-        .section-title {
-            font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
-            color: var(--muted); margin: 18px 0 8px; font-weight: 600;
-        }
-        .log-entry {
-            display: flex; gap: 10px; padding: 8px 10px;
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 8px; margin-bottom: 4px; font-size: 12px;
-        }
-        .log-time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 50px; }
+        .log-entry { display: flex; gap: 10px; padding: 8px 10px; background: var(--card); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 4px; font-size: 12px; }
+        .log-time { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; min-width: 48px; }
         .log-icon { font-size: 14px; }
         .log-text { flex: 1; }
+        .log-text a { color: var(--accent); }
 
-        /* Kanban */
-        .kanban { display: grid; gap: 8px; }
-        .kanban-col { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 10px; }
-        .kanban-col h4 { font-size: 12px; color: var(--muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
-        .kanban-col h4 span { color: var(--text); }
-        .kanban-card { 
-            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
-            border-radius: 8px; padding: 10px; margin-bottom: 6px; font-size: 12px;
-        }
-        .kanban-card .tag { font-size: 10px; color: var(--purple); margin-bottom: 3px; }
-        .kanban-card .title { color: #fff; font-weight: 500; }
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 50; align-items: center; justify-content: center; }
+        .modal-overlay.active { display: flex; }
+        .modal { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 20px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto; }
+        .modal h3 { color: #fff; margin-bottom: 14px; }
+        .modal label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; margin-top: 10px; text-transform: uppercase; }
+        .modal input, .modal textarea, .modal select { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; color: var(--text); font-size: 13px; font-family: inherit; margin-bottom: 4px; }
+        .modal textarea { min-height: 60px; resize: vertical; }
+        .modal .actions { display: flex; gap: 8px; margin-top: 16px; }
+        .btn { padding: 8px 16px; border-radius: 6px; border: none; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; }
+        .btn-gold { background: var(--accent); color: #000; }
+        .btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+        .btn-danger { background: var(--red); color: #fff; }
+        .btn-sm { padding: 4px 10px; font-size: 11px; border-radius: 4px; }
 
         /* Nav */
         nav {
             position: fixed; bottom: 0; left: 0; right: 0;
-            background: rgba(8,8,13,0.95); backdrop-filter: blur(10px);
+            background: rgba(5,5,8,0.95); backdrop-filter: blur(12px);
             border-top: 1px solid var(--border); display: flex;
-            padding: 8px 0 env(safe-area-inset-bottom, 8px);
+            padding: 6px 0 env(safe-area-inset-bottom, 6px); z-index: 20;
         }
-        nav a {
-            flex: 1; text-align: center; color: var(--muted); text-decoration: none;
-            font-size: 10px; padding: 6px 0;
-        }
+        nav a { flex: 1; text-align: center; color: var(--muted); text-decoration: none; font-size: 10px; padding: 4px 0; }
         nav a.active { color: var(--accent); }
-        nav a .nav-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+        nav a .ni { font-size: 17px; display: block; margin-bottom: 1px; }
 
-        /* Loading */
-        .skeleton { background: linear-gradient(90deg, var(--card) 25%, rgba(255,255,255,0.03) 50%, var(--card) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 6px; }
-        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
 
-        .error-toast { 
-            position: fixed; bottom: 80px; left: 12px; right: 12px;
-            background: var(--danger); color: #fff; padding: 10px 14px;
-            border-radius: 10px; font-size: 12px; display: none; z-index: 100;
-        }
+        .toast { position: fixed; bottom: 90px; left: 12px; right: 12px; background: var(--red); color: #fff; padding: 10px 14px; border-radius: 10px; font-size: 12px; display: none; z-index: 100; }
+        .empty { text-align: center; padding: 30px; color: var(--muted); font-size: 13px; }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loader { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 20px auto; }
     </style>
 </head>
 <body>
-    <div class="error-toast" id="toast"></div>
+    <div class="toast" id="toast"></div>
 
     <header>
-        <div>
-            <h1>⚡ Pulso<span>Connect</span></h1>
-            <div class="timestamp" id="clock">Conectando...</div>
-        </div>
-        <div style="font-size:12px;color:var(--muted)"><span class="status-dot online"></span>Live</div>
+        <div><h1>⚡ Pulso<span>Connect</span></h1><div class="timestamp" id="clock">--</div></div>
+        <div style="font-size:12px;color:var(--muted)"><span class="sdot online"></span>Live</div>
     </header>
 
-    <!-- System Health -->
-    <div class="section-title">📡 Sistemas</div>
-    <div class="systems-grid" id="systems"></div>
-
-    <!-- Kanban HDS -->
-    <div class="section-title">📋 Tareas HDS</div>
-    <div class="kanban" id="kanban">
-        <div class="kanban-col"><h4>⏳ Pendientes <span id="cnt-pending">0</span></h4><div id="col-pending"></div></div>
-        <div class="kanban-col"><h4>🔄 En Progreso <span id="cnt-progress">0</span></h4><div id="col-progress"></div></div>
-        <div class="kanban-col"><h4>✅ Completado <span id="cnt-done">0</span></h4><div id="col-done"></div></div>
+    <!-- ===== DASHBOARD ===== -->
+    <div class="tab-content active" id="tab-dashboard">
+        <div class="stats-row" id="stats"></div>
+        <div class="sect">📡 Sistemas</div>
+        <div class="sys-grid" id="systems"></div>
+        <div class="sect">📜 Actividad</div>
+        <div id="activity"></div>
     </div>
 
-    <!-- Activity -->
-    <div class="section-title">📜 Actividad Reciente</div>
-    <div id="activity"></div>
+    <!-- ===== SERVICIOS ===== -->
+    <div class="tab-content" id="tab-servicios">
+        <div class="sect">
+            🛠️ Servicios
+            <button class="btn btn-gold btn-sm" onclick="openServiceModal()">+ Nuevo</button>
+        </div>
+        <div id="servicios-list"></div>
+    </div>
+
+    <!-- ===== PROYECTOS ===== -->
+    <div class="tab-content" id="tab-proyectos">
+        <div class="sect">🏗️ Proyectos & Tareas</div>
+        <div id="proyectos-list"></div>
+    </div>
+
+    <!-- ===== INSIGHTS ===== -->
+    <div class="tab-content" id="tab-insights">
+        <div class="sect">🧠 Brain Sync · Insights</div>
+        <div id="insights-list"></div>
+    </div>
+
+    <!-- ===== CONEXIONES ===== -->
+    <div class="tab-content" id="tab-conexiones">
+        <div class="sect">🔗 Conexiones</div>
+        <div id="conexiones-list"></div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal"></div>
+    </div>
 
     <nav>
-        <a href="#" class="active" onclick="showTab('dashboard');return false"><span class="nav-icon">📊</span>Dashboard</a>
-        <a href="https://github.com/alidavila/pulso-connect-crm/issues" target="_blank"><span class="nav-icon">📋</span>Tareas</a>
-        <a href="#" onclick="showTab('metrics');return false"><span class="nav-icon">📈</span>Métricas</a>
-        <a href="https://github.com/alidavila/pulso-connect-crm/projects" target="_blank"><span class="nav-icon">⚙️</span>GitHub</a>
+        <a href="#" class="active" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="ni">📊</span>Dashboard</a>
+        <a href="#" data-tab="servicios" onclick="switchTab('servicios')"><span class="ni">🛠️</span>Servicios</a>
+        <a href="#" data-tab="proyectos" onclick="switchTab('proyectos')"><span class="ni">🏗️</span>Proyectos</a>
+        <a href="#" data-tab="insights" onclick="switchTab('insights')"><span class="ni">🧠</span>Insights</a>
+        <a href="#" data-tab="conexiones" onclick="switchTab('conexiones')"><span class="ni">🔗</span>Red</a>
     </nav>
 
     <script>
-        // ==================== CONFIG ====================
-        const SUPABASE_PROJECTS = {
+        // ================ CONFIG ================
+        const DANTE = {
+            url: 'https://pcnutiyinpyyznnfzsbo.supabase.co',
+            anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBjbnV0aXlpbnB5eXpubmZ6c2JvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1ODYwNTEsImV4cCI6MjA2NDE2MjA1MX0.wStE28TpptpsJtDQ6Jd7Wl0fAF5vSyUKUJupDXRQ140'
+        };
+        const EXT = {
             agentlink: { url: 'https://afospshladroetawktst.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmb3Nwc2hsYWRyb2V0YXdrdHN0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3OTE1NjQsImV4cCI6MjA4NTM2NzU2NH0.XZX4j_hVbIhr3HTZSRsxrSlh0TnFJJBatEXujSFq69o' },
-            veritas:   { url: 'https://rdoccjqvkmvobmqrvisy.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb2NjanZxa212b2JtcXJ2aXN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNTE4NzksImV4cCI6MjA4NTkyNzg3OX0.UAAgpubj_uN1chg8-UyAB3CgEM0aG1MRLtU1mle1v_w' },
-            carnicero: { url: 'https://yqnjlbvyeyuwugnltxmg.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxbmpsYnZ5ZXl1d3Vnbmx0eG1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NjAxMDIsImV4cCI6MjA4NDQzNjEwMn0.d-s9zlSgh47B6T9-BwzdX1qCKBEL_-RH1qGxSmu2mAk' }
+            carnicero: { url: 'https://yqnjlbvyeyuwugnltxmg.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxbmpsYnZ5ZXl1d3Vnbmx0eG1nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg4NjAxMDIsImV4cCI6MjA4NDQzNjEwMn0.d-s9zlSgh47B6T9-BwzdX1qCKBEL_-RH1qGxSmu2mAk' },
+            veritas: { url: 'https://rdoccjqvkmvobmqrvisy.supabase.co', anon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJkb2NjanZxa212b2JtcXJ2aXN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzNTE4NzksImV4cCI6MjA4NTkyNzg3OX0.UAAgpubj_uN1chg8-UyAB3CgEM0aG1MRLtU1mle1v_w' }
         };
 
-        // ==================== SUPABASE QUERY ====================
-        async function supabaseRPC(project, table, select = '*', limit = 10) {
-            const { url, anon } = SUPABASE_PROJECTS[project];
+        // ================ HELPERS ================
+        async function sq(project, table, opts = {}) {
+            const { url, anon } = (project === 'dante') ? DANTE : EXT[project];
+            if (!url) return [];
+            const { select = '*', limit = 50, order = 'created_at.desc', filter } = opts;
+            let qs = `select=${encodeURIComponent(select)}&limit=${limit}`;
+            if (order) qs += `&order=${order}`;
+            if (filter) qs += `&${filter}`;
             try {
-                const query = `select=${encodeURIComponent(select)}&limit=${limit}&order=created_at.desc`;
-                const resp = await fetch(`${url}/rest/v1/${table}?${query}`, {
-                    headers: { 'apikey': anon, 'Authorization': `Bearer ${anon}` }
-                });
-                if (!resp.ok) throw new Error(`${resp.status}`);
-                return await resp.json();
-            } catch (e) {
-                console.warn(`${project}/${table}: ${e.message}`);
-                return [];
-            }
+                const r = await fetch(`${url}/rest/v1/${table}?${qs}`, { headers: { apikey: anon, Authorization: `Bearer ${anon}` } });
+                if (!r.ok) throw new Error(r.status);
+                return await r.json();
+            } catch (e) { console.warn(`${project}/${table}:`, e.message); return []; }
         }
 
-        // ==================== AGGREGATE API ====================
-        async function fetchAggregate() {
+        async function sqCount(project, table) {
+            const { url, anon } = (project === 'dante') ? DANTE : EXT[project];
             try {
-                const resp = await fetch('/api/aggregate');
-                if (!resp.ok) throw new Error(`${resp.status}`);
-                return await resp.json();
-            } catch (e) {
-                console.warn('aggregate API:', e.message);
-                return null;
-            }
+                const r = await fetch(`${url}/rest/v1/${table}?select=count`, { headers: { apikey: anon, Authorization: `Bearer ${anon}`, Prefer: 'count=exact' } });
+                const cr = r.headers.get('content-range');
+                return cr ? parseInt(cr.split('/')[1]) : 0;
+            } catch (e) { return 0; }
         }
 
-        // ==================== RENDER ====================
-        async function loadDashboard() {
-            // Clock
-            document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-            // Try aggregate API first (server-side, has service_role access)
-            const agg = await fetchAggregate();
-
-            // Fallback: query Supabase directly with anon keys
-            const [agentlinkJobs, agentlinkContacts, carniceroData, veritasData] = await Promise.all([
-                supabaseRPC('agentlink', 'jobs', 'status,company_name,job_title', 20),
-                supabaseRPC('agentlink', 'contacts', 'count', 1),
-                supabaseRPC('carnicero', 'products', 'count', 1),
-                supabaseRPC('veritas', 'agents', 'count', 1)
-            ]);
-
-            // Job stats
-            const jobCount = agentlinkJobs.length;
-            const applied = agentlinkJobs.filter(j => j.status === 'applied' || j.status === 'interviewing').length;
-            const newJobs = agentlinkJobs.filter(j => j.status === 'new' || j.status === 'saved').length;
-
-            // Contacts
-            const contactCount = agentlinkContacts[0]?.count || '?';
-
-            // Render system cards
-            const systems = [
-                { 
-                    id: 'agentlink', name: 'AgentLink', icon: '🎯',
-                    metric: jobCount, unit: 'jobs',
-                    online: true,
-                    details: [
-                        { label: 'Aplicados', value: applied },
-                        { label: 'Nuevos', value: newJobs },
-                        { label: 'Contactos', value: contactCount }
-                    ]
-                },
-                { 
-                    id: 'veritas', name: 'Veritas', icon: '⛓️',
-                    metric: veritasData[0]?.count || 0, unit: 'agentes',
-                    online: veritasData.length > 0,
-                    details: [
-                        { label: 'Dashboard', value: veritasData.length > 0 ? 'OK' : 'Pendiente' },
-                        { label: 'Treasury', value: 'Sepolia' }
-                    ]
-                },
-                { 
-                    id: 'carnicero', name: 'Carnicero', icon: '🥩',
-                    metric: carniceroData[0]?.count || 0, unit: 'productos',
-                    online: carniceroData.length > 0,
-                    details: [
-                        { label: 'Marketplace', value: carniceroData.length > 0 ? 'OK' : 'Pendiente' }
-                    ]
-                }
-            ];
-
-            const grid = document.getElementById('systems');
-            grid.innerHTML = systems.map(sys => `
-                <div class="sys-card" onclick="toggleCard(this)" id="card-${sys.id}">
-                    <h3>${sys.icon} ${sys.name} 
-                        <span class="status-dot ${sys.online ? 'online' : 'pending'}"></span>
-                    </h3>
-                    <div class="metric">${sys.metric} <span style="font-size:12px;font-weight:400;color:var(--muted)">${sys.unit}</span></div>
-                    <div class="details">
-                        ${sys.details.map(d => `<div class="detail-row"><span>${d.label}</span><span>${d.value}</span></div>`).join('')}
-                    </div>
-                </div>
-            `).join('');
-
-            // Activity log (from aggregate or fallback)
-            const activity = agg?.activity || [
-                { time: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}), icon: '📊', text: `AgentLink: ${jobCount} jobs, ${applied} aplicados` },
-                { time: new Date().toLocaleTimeString('es-VE',{hour:'2-digit',minute:'2-digit'}), icon: '🏗️', text: 'CRM desplegado en Vercel' },
-                { time: '--', icon: '🔧', text: 'Conexión Supabase activa' }
-            ];
-
-            document.getElementById('activity').innerHTML = activity.map(log => `
-                <div class="log-entry">
-                    <div class="log-time">${log.time}</div>
-                    <div class="log-icon">${log.icon}</div>
-                    <div class="log-text">${log.text}</div>
-                </div>
-            `).join('');
-
-            // Kanban — fetch real GitHub issues from aggregate API
-            const tasks = agg?.tasks || [];
-            const pending = tasks.filter(t => t.status === 'pending');
-            const progress = tasks.filter(t => t.status === 'progress');
-            const done = tasks.filter(t => t.status === 'done');
-
-            function renderCol(colId, taskList) {
-                const el = document.getElementById(`col-${colId}`);
-                document.getElementById(`cnt-${colId}`).textContent = taskList.length;
-                if (taskList.length === 0) {
-                    el.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:8px;text-align:center">—</div>';
-                    return;
-                }
-                el.innerHTML = taskList.map(t => `
-                    <div class="kanban-card" onclick="window.open('${t.url}','_blank')" style="cursor:pointer">
-                        <div class="tag">#${t.number}</div>
-                        <div class="title">${t.title}</div>
-                        <div style="color:var(--muted);font-size:10px;margin-top:4px">@${t.assignee}</div>
-                    </div>
-                `).join('');
-            }
-
-            renderCol('pending', tasks.pending);
-            renderCol('progress', tasks.progress);
-            renderCol('done', tasks.done);
+        function tag(status) {
+            const m = { active: 'tag-active', idea: 'tag-idea', 'diseño': 'tag-diseno', diseño: 'tag-diseno', active: 'tag-active', wip: 'tag-wip' };
+            return `<span class="tag ${m[status] || 'tag-default'}">${status || '?'}</span>`;
         }
 
-        function toggleCard(card) {
-            card.classList.toggle('expanded');
+        function timeAgo(ts) {
+            if (!ts) return '—';
+            const d = new Date(ts);
+            const now = new Date();
+            const diff = Math.floor((now - d) / 1000);
+            if (diff < 60) return 'ahora';
+            if (diff < 3600) return Math.floor(diff / 60) + 'm';
+            if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+            return Math.floor(diff / 86400) + 'd';
         }
 
-        function showToast(msg) {
+        function toast(msg) {
             const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.style.display = 'block';
+            t.textContent = msg; t.style.display = 'block';
             setTimeout(() => t.style.display = 'none', 3000);
         }
 
-        function showTab(tab) {
-            if (tab === 'metrics') {
-                document.getElementById('activity').innerHTML = `
-                    <div class="log-entry">
-                        <div class="log-icon">📊</div>
-                        <div class="log-text">
-                            <strong>Gestión de tareas:</strong> 
-                            <a href="https://github.com/alidavila/pulso-connect-crm/issues" target="_blank" style="color:var(--accent)">GitHub Issues →</a>
-                        </div>
-                    </div>
-                    <div class="log-entry">
-                        <div class="log-icon">📋</div>
-                        <div class="log-text">
-                            <strong>Kanban board:</strong> 
-                            <a href="https://github.com/alidavila/pulso-connect-crm/projects" target="_blank" style="color:var(--accent)">GitHub Projects →</a>
-                        </div>
-                    </div>
-                    <div class="log-entry">
-                        <div class="log-icon">💡</div>
-                        <div class="log-text">Las tareas se crean como issues en GitHub. El dashboard las muestra automáticamente.</div>
-                    </div>
-                `;
-            }
+        // ================ TABS ================
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            document.querySelectorAll('nav a').forEach(a => a.classList.remove('active'));
+            document.querySelector(`nav a[data-tab="${tab}"]`).classList.add('active');
+            if (tab === 'dashboard') loadDashboard();
+            else if (tab === 'servicios') loadServicios();
+            else if (tab === 'proyectos') loadProyectos();
+            else if (tab === 'insights') loadInsights();
+            else if (tab === 'conexiones') loadConexiones();
         }
 
-        // ==================== INIT ====================
-        loadDashboard().catch(e => showToast('Error cargando dashboard: ' + e.message));
-        setInterval(loadDashboard, 60000); // Refresh every 60s
+        // ================ DASHBOARD ================
+        async function loadDashboard() {
+            document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            const [svcCount, projCount, taskCount, convCount, insCount, connCount,
+                   alJobs, carProds, verAgents] = await Promise.all([
+                sqCount('dante', 'services'), sqCount('dante', 'projects'), sqCount('dante', 'tasks'),
+                sqCount('dante', 'conversaciones'), sqCount('dante', 'insights'), sqCount('dante', 'connections'),
+                sq('agentlink', 'jobs', { select: 'status', limit: 50 }),
+                sq('carnicero', 'products', { select: 'count', limit: 1 }),
+                sq('veritas', 'agents', { select: 'count', limit: 1 })
+            ]);
+
+            // Stats
+            document.getElementById('stats').innerHTML = [
+                { n: svcCount, l: 'Servicios' }, { n: projCount, l: 'Proyectos' }, { n: convCount, l: 'Conversaciones' }
+            ].map(s => `<div class="stat-card"><div class="num">${s.n}</div><div class="lbl">${s.l}</div></div>`).join('');
+
+            // Systems
+            const jobTotal = alJobs.length;
+            const jobApplied = alJobs.filter(j => j.status === 'applied' || j.status === 'interviewing').length;
+            const carCount = carProds[0]?.count || 0;
+            const verCount = verAgents[0]?.count || 0;
+
+            const systems = [
+                { id: 'agentlink', name: 'AgentLink', icon: '🎯', metric: jobTotal, unit: 'jobs', online: jobTotal > 0,
+                    details: [{ l: 'Aplicados', v: jobApplied }, { l: 'Contactos', v: '—' }, { l: 'Contenido', v: '—' }] },
+                { id: 'lucia', name: 'Lucía', icon: '💰', metric: '1090', unit: 'txns', online: true,
+                    details: [{ l: 'Cuentas', v: '11' }, { l: 'Deudas', v: '4' }, { l: 'Usuarios', v: '5' }] },
+                { id: 'veritas', name: 'Veritas', icon: '⛓️', metric: verCount, unit: 'agentes', online: verCount > 0,
+                    details: [{ l: 'Estado', v: verCount > 0 ? 'OK' : 'Pendiente' }, { l: 'Treasury', v: 'Sepolia' }] },
+                { id: 'matarife', name: 'Matarife', icon: '🥩', metric: carCount, unit: 'productos', online: carCount > 0,
+                    details: [{ l: 'Dominio', v: 'matarife.app' }, { l: 'Marketplace', v: carCount > 0 ? 'OK' : 'Setup' }] },
+                { id: 'salenis', name: 'Salenis', icon: '🎬', metric: 'Live', unit: '', online: true,
+                    details: [{ l: 'Dominio', v: 'salenis.com' }, { l: 'Contenido', v: 'Activo' }] }
+            ];
+
+            document.getElementById('systems').innerHTML = systems.map(s => `
+                <div class="sys-card" onclick="this.classList.toggle('expanded')">
+                    <h3>${s.icon} ${s.name} <span class="sdot ${s.online ? 'online' : 'pending'}"></span></h3>
+                    <div class="metric">${s.metric} <span style="font-size:12px;font-weight:400;color:var(--muted)">${s.unit}</span></div>
+                    <div class="details">${s.details.map(d => `<div class="dr"><span>${d.l}</span><span>${d.v}</span></div>`).join('')}</div>
+                </div>
+            `).join('');
+
+            // Activity
+            const svcs = await sq('dante', 'services', { order: 'updated_at.desc', limit: 5 });
+            const activity = svcs.map(s => ({
+                time: timeAgo(s.updated_at), icon: '🛠️',
+                text: `<strong>${s.label}</strong>: ${(s.description || '').slice(0, 60)}`
+            }));
+            document.getElementById('activity').innerHTML = activity.map(a => `
+                <div class="log-entry">
+                    <div class="log-time">${a.time}</div><div class="log-icon">${a.icon}</div><div class="log-text">${a.text}</div>
+                </div>
+            `).join('');
+        }
+
+        // ================ SERVICIOS ================
+        async function loadServicios() {
+            const svcs = await sq('dante', 'services', { order: 'label.asc', limit: 20 });
+            document.getElementById('servicios-list').innerHTML = svcs.map(s => `
+                <div class="lcard" onclick="openServiceModal('${s.id}')">
+                    <div class="top">
+                        <span class="title">${s.label}</span>
+                        ${tag(s.status)}
+                    </div>
+                    <div class="desc">${s.description || 'Sin descripción'}</div>
+                    <div class="meta">
+                        <span>📂 ${s.categoria || '—'}</span>
+                        <span>🕐 ${timeAgo(s.updated_at)}</span>
+                    </div>
+                </div>
+            `).join('') || '<div class="empty">No hay servicios aún</div>';
+        }
+
+        async function openServiceModal(id) {
+            const overlay = document.getElementById('modal-overlay');
+            const modal = document.getElementById('modal');
+            overlay.classList.add('active');
+
+            let svc = { label: '', description: '', categoria: '', status: 'active', id: '' };
+            if (id) {
+                const data = await sq('dante', 'services', { filter: `id=eq.${id}`, limit: 1 });
+                if (data[0]) svc = data[0];
+            }
+
+            modal.innerHTML = `
+                <h3>${id ? 'Editar' : 'Nuevo'} Servicio</h3>
+                <label>Nombre</label><input id="e-label" value="${svc.label}">
+                <label>Descripción</label><textarea id="e-desc">${svc.description || ''}</textarea>
+                <label>Categoría</label><input id="e-cat" value="${svc.categoria || ''}">
+                <label>Estado</label>
+                <select id="e-status">
+                    <option ${svc.status==='active'?'selected':''}>active</option>
+                    <option ${svc.status==='wip'?'selected':''}>wip</option>
+                    <option ${svc.status==='idea'?'selected':''}>idea</option>
+                    <option ${svc.status==='diseño'?'selected':''}>diseño</option>
+                </select>
+                <div class="actions">
+                    <button class="btn btn-gold" onclick="saveService('${svc.id}')">Guardar</button>
+                    ${id ? `<button class="btn btn-danger" onclick="deleteService('${svc.id}')">Eliminar</button>` : ''}
+                    <button class="btn btn-ghost" onclick="document.getElementById('modal-overlay').classList.remove('active')">Cancelar</button>
+                </div>
+            `;
+        }
+
+        async function saveService(id) {
+            const data = {
+                label: document.getElementById('e-label').value,
+                description: document.getElementById('e-desc').value,
+                categoria: document.getElementById('e-cat').value,
+                status: document.getElementById('e-status').value,
+                updated_at: new Date().toISOString()
+            };
+            const { url, anon } = DANTE;
+            const method = id ? 'PATCH' : 'POST';
+            const endpoint = id ? `${url}/rest/v1/services?id=eq.${id}` : `${url}/rest/v1/services`;
+            try {
+                const r = await fetch(endpoint, {
+                    method, headers: { apikey: anon, Authorization: `Bearer ${anon}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+                    body: JSON.stringify(data)
+                });
+                if (!r.ok) throw new Error(r.status);
+                document.getElementById('modal-overlay').classList.remove('active');
+                loadServicios();
+                toast(id ? 'Servicio actualizado' : 'Servicio creado');
+            } catch (e) { toast('Error: ' + e.message); }
+        }
+
+        async function deleteService(id) {
+            if (!confirm('¿Eliminar este servicio?')) return;
+            const { url, anon } = DANTE;
+            try {
+                await fetch(`${url}/rest/v1/services?id=eq.${id}`, { method: 'DELETE', headers: { apikey: anon, Authorization: `Bearer ${anon}` } });
+                document.getElementById('modal-overlay').classList.remove('active');
+                loadServicios();
+                toast('Servicio eliminado');
+            } catch (e) { toast('Error: ' + e.message); }
+        }
+
+        // ================ PROYECTOS ================
+        async function loadProyectos() {
+            const [projs, tasks] = await Promise.all([
+                sq('dante', 'projects', { select: 'id,label,description,status,progress,created_at', order: 'created_at.desc', limit: 20 }),
+                sq('dante', 'tasks', { select: 'id,title,status,project_id,created_at', order: 'created_at.desc', limit: 20 })
+            ]);
+
+            let html = '<div class="sect" style="margin-top:0">📋 Proyectos</div>';
+            html += projs.map(p => `
+                <div class="lcard">
+                    <div class="top"><span class="title">${p.label}</span>${tag(p.status)}</div>
+                    <div class="desc">${p.description || ''}</div>
+                    <div class="meta"><span>📅 ${timeAgo(p.created_at)}</span><span>📊 ${p.progress || 0}%</span></div>
+                </div>
+            `).join('') || '<div class="empty">No hay proyectos</div>';
+
+            html += '<div class="sect">✅ Tareas</div>';
+            html += tasks.map(t => `
+                <div class="lcard">
+                    <div class="top"><span class="title">${t.title || 'Sin título'}</span>${tag(t.status)}</div>
+                    <div class="meta"><span>📅 ${timeAgo(t.created_at)}</span></div>
+                </div>
+            `).join('') || '<div class="empty">No hay tareas</div>';
+
+            document.getElementById('proyectos-list').innerHTML = html;
+        }
+
+        // ================ INSIGHTS ================
+        async function loadInsights() {
+            const ins = await sq('dante', 'insights', { order: 'created_at.desc', limit: 30 });
+            document.getElementById('insights-list').innerHTML = ins.map(i => `
+                <div class="lcard" onclick="this.classList.toggle('expanded')">
+                    <div class="top"><span class="title">${i.title || 'Sin título'}</span></div>
+                    <div class="desc">${(i.summary || i.key_insight || '').slice(0, 120)}</div>
+                    <div class="desc-full">
+                        <p>${i.content || ''}</p>
+                        ${i.topics?.length ? `<div style="margin-top:8px">${i.topics.map(t => `<span class="tag tag-default">${t}</span>`).join(' ')}</div>` : ''}
+                    </div>
+                    <div class="meta">
+                        <span>📅 ${timeAgo(i.conversation_date || i.created_at)}</span>
+                        <span>🔖 ${i.source_type || '—'}</span>
+                        ${i.emotional_state ? `<span>😶 ${i.emotional_state}</span>` : ''}
+                    </div>
+                </div>
+            `).join('') || '<div class="empty">No hay insights aún</div>';
+        }
+
+        // ================ CONEXIONES ================
+        async function loadConexiones() {
+            const conns = await sq('dante', 'connections', { order: 'created_at.desc', limit: 30 });
+            document.getElementById('conexiones-list').innerHTML = conns.map(c => `
+                <div class="lcard">
+                    <div class="top">
+                        <span class="title">${c.source_type} → ${c.target_type}</span>
+                        <span style="font-size:11px;color:var(--muted)">${(c.strength * 100).toFixed(0)}%</span>
+                    </div>
+                    <div class="desc">${c.relationship || 'related_to'}</div>
+                    <div class="meta"><span>📅 ${timeAgo(c.created_at)}</span></div>
+                </div>
+            `).join('') || '<div class="empty">No hay conexiones aún</div>';
+        }
+
+        // ================ MODAL CLOSE ================
+        document.getElementById('modal-overlay').addEventListener('click', function(e) {
+            if (e.target === this) this.classList.remove('active');
+        });
+
+        // ================ INIT ================
+        loadDashboard().catch(e => toast('Error: ' + e.message));
         setInterval(() => {
             document.getElementById('clock').textContent = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         }, 1000);
+        setInterval(() => {
+            if (document.getElementById('tab-dashboard').classList.contains('active')) loadDashboard();
+        }, 60000);
     </script>
 </body>
 </html>
