@@ -147,6 +147,18 @@
         <div id="servicios-list"></div>
     </div>
 
+    <!-- ===== PIPELINE ===== -->
+    <div class="tab-content" id="tab-pipeline">
+        <div class="sect">
+            📊 Pipeline de Ventas
+            <button class="btn btn-gold btn-sm" onclick="openLeadModal()">+ Nuevo Lead</button>
+        </div>
+        <div class="sect" style="margin-top:4px">
+            <span id="pipeline-value" style="color:var(--accent)"></span>
+        </div>
+        <div class="kanban" id="pipeline"></div>
+    </div>
+
     <!-- ===== PROYECTOS ===== -->
     <div class="tab-content" id="tab-proyectos">
         <div class="sect">🏗️ Proyectos & Tareas</div>
@@ -173,6 +185,7 @@
     <nav>
         <a href="#" class="active" data-tab="dashboard" onclick="switchTab('dashboard')"><span class="ni">📊</span>Dashboard</a>
         <a href="#" data-tab="servicios" onclick="switchTab('servicios')"><span class="ni">🛠️</span>Servicios</a>
+        <a href="#" data-tab="pipeline" onclick="switchTab('pipeline')"><span class="ni">📊</span>Pipeline</a>
         <a href="#" data-tab="proyectos" onclick="switchTab('proyectos')"><span class="ni">🏗️</span>Proyectos</a>
         <a href="#" data-tab="insights" onclick="switchTab('insights')"><span class="ni">🧠</span>Insights</a>
         <a href="#" data-tab="conexiones" onclick="switchTab('conexiones')"><span class="ni">🔗</span>Red</a>
@@ -244,6 +257,7 @@
             document.querySelector(`nav a[data-tab="${tab}"]`).classList.add('active');
             if (tab === 'dashboard') loadDashboard();
             else if (tab === 'servicios') loadServicios();
+            else if (tab === 'pipeline') loadPipeline();
             else if (tab === 'proyectos') loadProyectos();
             else if (tab === 'insights') loadInsights();
             else if (tab === 'conexiones') loadConexiones();
@@ -456,6 +470,141 @@
         document.getElementById('modal-overlay').addEventListener('click', function(e) {
             if (e.target === this) this.classList.remove('active');
         });
+
+        // ================ PIPELINE ================
+        async function loadPipeline() {
+            let leads = [];
+            try {
+                const r = await fetch('/api/leads');
+                if (r.ok) leads = await r.json();
+            } catch (e) {
+                // Fallback: try Supabase REST directly
+                leads = await sq('dante', 'leads', { order: 'created_at.desc', limit: 50 });
+            }
+
+            const statuses = [
+                { id: 'nuevo', label: '🆕 Nuevos', color: 'var(--purple)' },
+                { id: 'contactado', label: '📞 Contactado', color: 'var(--blue)' },
+                { id: 'en_negociacion', label: '🤝 Negociación', color: 'var(--warn)' },
+                { id: 'cerrado_ganado', label: '✅ Ganado', color: 'var(--green)' },
+                { id: 'cerrado_perdido', label: '❌ Perdido', color: 'var(--red)' }
+            ];
+
+            const total = leads.reduce((s, l) => s + (parseFloat(l.value) || 0), 0);
+            document.getElementById('pipeline-value').textContent = `💰 Total pipeline: $${total.toLocaleString()} · ${leads.length} leads`;
+
+            const pipeline = document.getElementById('pipeline');
+            pipeline.innerHTML = statuses.map(st => {
+                const items = leads.filter(l => l.status === st.id);
+                return `
+                <div class="kanban-col">
+                    <h4 style="color:${st.color}">${st.label} <span>${items.length}</span></h4>
+                    ${items.map(l => `
+                    <div class="kanban-card" onclick="openLeadModal('${l.id}')">
+                        <div class="title">${l.name || 'Sin nombre'}</div>
+                        ${l.company ? `<div style="color:var(--muted);font-size:10px">🏢 ${l.company}</div>` : ''}
+                        <div style="display:flex;justify-content:space-between;margin-top:6px">
+                            <span style="color:var(--accent);font-size:11px">$${(l.value||0).toLocaleString()}</span>
+                            <span style="font-size:10px;color:var(--muted)">${timeAgo(l.updated_at)}</span>
+                        </div>
+                    </div>
+                    `).join('') || '<div style="color:var(--muted);font-size:11px;padding:8px;text-align:center">—</div>'}
+                </div>`;
+            }).join('');
+        }
+
+        async function openLeadModal(id) {
+            const overlay = document.getElementById('modal-overlay');
+            overlay.classList.add('active');
+            const modal = document.getElementById('modal');
+
+            let lead = { name: '', email: '', phone: '', company: '', source: 'web', status: 'nuevo', value: 0, notes: '', id: '' };
+            if (id) {
+                try {
+                    const r = await fetch('/api/leads');
+                    if (r.ok) {
+                        const all = await r.json();
+                        lead = all.find(l => l.id === id) || lead;
+                    }
+                } catch (e) {
+                    const data = await sq('dante', 'leads', { filter: `id=eq.${id}`, limit: 1 });
+                    if (data[0]) lead = data[0];
+                }
+            }
+
+            modal.innerHTML = `
+                <h3>${id ? 'Editar' : 'Nuevo'} Lead</h3>
+                <label>Nombre *</label><input id="e-name" value="${lead.name || ''}">
+                <label>Empresa</label><input id="e-company" value="${lead.company || ''}">
+                <label>Email</label><input id="e-email" type="email" value="${lead.email || ''}">
+                <label>Teléfono</label><input id="e-phone" value="${lead.phone || ''}">
+                <label>Valor ($)</label><input id="e-value" type="number" value="${lead.value || 0}">
+                <label>Estado</label>
+                <select id="e-status">
+                    ${['nuevo','contactado','en_negociacion','cerrado_ganado','cerrado_perdido'].map(s =>
+                        `<option ${lead.status === s ? 'selected' : ''}>${s}</option>`
+                    ).join('')}
+                </select>
+                <label>Notas</label><textarea id="e-notes">${lead.notes || ''}</textarea>
+                <div class="actions">
+                    <button class="btn btn-gold" onclick="saveLead('${lead.id}')">Guardar</button>
+                    ${id ? `<button class="btn btn-danger" onclick="deleteLead('${lead.id}')">Eliminar</button>` : ''}
+                    <button class="btn btn-ghost" onclick="document.getElementById('modal-overlay').classList.remove('active')">Cancelar</button>
+                </div>
+            `;
+        }
+
+        async function saveLead(id) {
+            const data = {
+                name: document.getElementById('e-name').value,
+                company: document.getElementById('e-company').value,
+                email: document.getElementById('e-email').value,
+                phone: document.getElementById('e-phone').value,
+                value: parseFloat(document.getElementById('e-value').value) || 0,
+                status: document.getElementById('e-status').value,
+                notes: document.getElementById('e-notes').value,
+                updated_at: new Date().toISOString()
+            };
+            if (id) data.id = id;
+
+            try {
+                const r = await fetch('/api/leads', {
+                    method: id ? 'PATCH' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                if (!r.ok) throw new Error(r.status);
+                document.getElementById('modal-overlay').classList.remove('active');
+                loadPipeline();
+                toast(id ? 'Lead actualizado' : 'Lead creado');
+            } catch (e) {
+                toast('Error API — guardando vía REST...');
+                // Fallback Supabase REST
+                const { url, anon } = DANTE;
+                const method = id ? 'PATCH' : 'POST';
+                const endpoint = id ? `${url}/rest/v1/leads?id=eq.${id}` : `${url}/rest/v1/leads`;
+                await fetch(endpoint, {
+                    method, headers: { apikey: anon, Authorization: `Bearer ${anon}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+                    body: JSON.stringify(data)
+                });
+                document.getElementById('modal-overlay').classList.remove('active');
+                loadPipeline();
+                toast(id ? 'Lead actualizado' : 'Lead creado');
+            }
+        }
+
+        async function deleteLead(id) {
+            if (!confirm('¿Eliminar este lead?')) return;
+            try {
+                await fetch(`/api/leads?id=${id}`, { method: 'DELETE' });
+            } catch (e) {
+                const { url, anon } = DANTE;
+                await fetch(`${url}/rest/v1/leads?id=eq.${id}`, { method: 'DELETE', headers: { apikey: anon, Authorization: `Bearer ${anon}` } });
+            }
+            document.getElementById('modal-overlay').classList.remove('active');
+            loadPipeline();
+            toast('Lead eliminado');
+        }
 
         // ================ INIT ================
         loadDashboard().catch(e => toast('Error: ' + e.message));
